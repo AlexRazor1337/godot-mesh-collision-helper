@@ -12,18 +12,19 @@ var label
 var vbox
 var type_selector
 
+
 func create_ui():
 	vbox = VBoxContainer.new()
 	var hbox = HBoxContainer.new()
 
 	type_selector = OptionButton.new()
-	type_selector.add_item("Trimesh")
-	type_selector.add_item("Convex")
-	type_selector.add_item("Multiple Convex")
+	type_selector.add_item('Trimesh')
+	type_selector.add_item('Convex')
+	type_selector.add_item('Multiple Convex')
 
 	generate_button = Button.new()
-	generate_button.text = "Generate Collisions"
-	generate_button.connect("pressed", self, "_on_generate_button_pressed")
+	generate_button.text = 'Generate Collisions'
+	generate_button.connect('pressed', self, '_on_generate_button_pressed')
 
 	label = Label.new()
 	line_edit = LineEdit.new()
@@ -46,7 +47,7 @@ func create_ui():
 func _enter_tree():
 	plugin = EditorPlugin.new()
 	create_ui()
-	add_control_to_bottom_panel(vbox, "Generate Collisions")
+	add_control_to_bottom_panel(vbox, 'Generate Collisions')
 
 
 func _exit_tree():
@@ -55,15 +56,15 @@ func _exit_tree():
 
 func label_error(msg):
 	label.text = msg
-	label.add_color_override("font_color", RED)
+	label.add_color_override('font_color', RED)
 
 
 func reset_label():
 	label.text = ''
-	label.add_color_override("font_color", WHITE)
+	label.add_color_override('font_color', WHITE)
 
 
-func find_all(node: Node, name_contains : String, result : Array) -> void:
+func find_all(node: Node, name_contains: String, result: Array) -> void:
 	if node is MeshInstance and name_contains in node.name:
 		result.push_back(node)
 
@@ -104,7 +105,7 @@ func _on_generate_button_pressed():
 		if static_body_child:
 			static_body_child.queue_free()
 
-		yield(get_tree(), "idle_frame")
+		yield(get_tree(), 'idle_frame')
 		match type:
 			0:
 				node.create_trimesh_collision()
