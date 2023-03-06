@@ -10,14 +10,19 @@ var line_edit
 var progress_bar
 var label
 var vbox
-
+var type_selector
 
 func create_ui():
 	vbox = VBoxContainer.new()
 	var hbox = HBoxContainer.new()
 
+	type_selector = OptionButton.new()
+	type_selector.add_item("Trimesh")
+	type_selector.add_item("Convex")
+	type_selector.add_item("Multiple Convex")
+
 	generate_button = Button.new()
-	generate_button.text = "Generate Trimesh Collisions"
+	generate_button.text = "Generate Collisions"
 	generate_button.connect("pressed", self, "_on_generate_button_pressed")
 
 	label = Label.new()
@@ -30,6 +35,7 @@ func create_ui():
 	progress_bar = ProgressBar.new()
 
 	hbox.add_child(line_edit)
+	hbox.add_child(type_selector)
 	hbox.add_child(label)
 
 	vbox.add_child(hbox)
@@ -40,7 +46,7 @@ func create_ui():
 func _enter_tree():
 	plugin = EditorPlugin.new()
 	create_ui()
-	add_control_to_bottom_panel(vbox, "GenerateCollisions")
+	add_control_to_bottom_panel(vbox, "Generate Collisions")
 
 
 func _exit_tree():
@@ -88,6 +94,8 @@ func _on_generate_button_pressed():
 		return label_error('Error: Zero matching nodes found!')
 
 	label.text = 'Processing ' + str(len(matching_nodes)) + ' nodes...'
+
+	var type = type_selector.get_selected()
 	progress_bar.value = 0.0
 	var progress_step = 100.0 / matching_nodes.size()
 	# Generate trimesh collisions for each matching node
@@ -97,15 +105,18 @@ func _on_generate_button_pressed():
 			static_body_child.queue_free()
 
 		yield(get_tree(), "idle_frame")
-		node.create_trimesh_collision()
+		match type:
+			0:
+				node.create_trimesh_collision()
+			1:
+				node.create_convex_collision()
+			2:
+				node.create_multiple_convex_collisions()
+
 		progress_bar.value += progress_step
 
-
-func _register():
-	var icon =  get_editor_interface().get_base_control().get_icon("Node", "EditorIcons")
-	add_custom_type("GenerateCollisions", "EditorPlugin", load("generate_collisions.gd"), icon)
+	label.text = 'Done!'
 
 
 func _unregister():
 	remove_control_from_bottom_panel(vbox)
-	remove_custom_type("GenerateCollisions")
