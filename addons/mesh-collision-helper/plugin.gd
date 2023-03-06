@@ -99,7 +99,8 @@ func _on_generate_button_pressed():
 	var type = type_selector.get_selected()
 	progress_bar.value = 0.0
 	var progress_step = 100.0 / matching_nodes.size()
-	# Generate trimesh collisions for each matching node
+
+	# Generate collisions for each matching node
 	for node in matching_nodes:
 		var static_body_child = node.get_child(0)
 		if static_body_child:
