@@ -2,7 +2,7 @@ tool
 extends EditorPlugin
 
 const RED = Color(1, 0, 0)
-const WHITE = Color(0, 0, 0)
+const WHITE = Color(1, 1, 1)
 
 var generate_button
 var plugin
