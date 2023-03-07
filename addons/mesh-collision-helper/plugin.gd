@@ -11,6 +11,7 @@ var progress_bar
 var label
 var vbox
 var type_selector
+var threading_select
 
 
 func create_ui():
@@ -29,6 +30,16 @@ func create_ui():
 	label = Label.new()
 	line_edit = LineEdit.new()
 
+
+	var threading_label = Label.new()
+	threading_label.text = 'Threading:'
+	threading_select = OptionButton.new()
+	for i in range(1, OS.get_processor_count() + 1):
+		if i == 1:
+			threading_select.add_item('Disabled')
+		else:
+			threading_select.add_item(str(i))
+
 	var editor_viewport = get_editor_interface().get_editor_viewport()
 	yield(get_tree(), 'idle_frame')
 
@@ -38,6 +49,8 @@ func create_ui():
 	hbox.add_child(line_edit)
 	hbox.add_child(type_selector)
 	hbox.add_child(label)
+	hbox.add_child(threading_label)
+	hbox.add_child(threading_select)
 
 	vbox.add_child(hbox)
 	vbox.add_child(progress_bar)
@@ -71,6 +84,35 @@ func find_all(node: Node, name_contains: String, result: Array) -> void:
 	for child in node.get_children():
 		find_all(child, name_contains, result)
 
+func create_collision_shape_from_mesh(mesh: Mesh) -> ConvexPolygonShape:
+	var col = CollisionShape.new()
+	var cps = ConvexPolygonShape.new()
+	cps.points = mesh.get_mesh_arrays()
+	col.shape = cps
+
+	return col
+
+func generate_collisions_batch(data):
+	var meshes = data[0]
+	var type = data[1]
+	var progress_step = data[2]
+	for node in meshes:
+		var static_body_child = node.get_child(0)
+		if static_body_child and static_body_child is StaticBody:
+			static_body_child.queue_free()
+
+		yield(get_tree(), 'idle_frame')
+
+		match type:
+			0:
+				node.create_trimesh_collision()
+			1:
+				node.create_convex_collision()
+			2:
+				node.create_multiple_convex_collisions()
+
+		progress_bar.value += progress_step
+
 
 func _on_generate_button_pressed():
 	reset_label()
@@ -100,24 +142,31 @@ func _on_generate_button_pressed():
 	progress_bar.value = 0.0
 	var progress_step = 100.0 / matching_nodes.size()
 
-	# Generate collisions for each matching node
-	for node in matching_nodes:
-		var static_body_child = node.get_child(0)
-		if static_body_child:
-			static_body_child.queue_free()
+	var thread_count = threading_select.get_selected()
+	if thread_count == 0:
+		generate_collisions_batch([matching_nodes, type, progress_step])
+	else:
+		var batches = []
+		var batch_size = floor(matching_nodes.size() / thread_count)
+		var remaining_nodes = matching_nodes.size() - batch_size * thread_count
+		var node_index = 0
+		for i in range(thread_count):
+			var batch = []
+			var size = batch_size
+			if remaining_nodes > 0:
+				size += remaining_nodes
+				remaining_nodes = 0
+			for j in range(size):
+				batch.append(matching_nodes[node_index])
+				node_index += 1
+			batches.append(batch)
 
-		yield(get_tree(), 'idle_frame')
-		match type:
-			0:
-				node.create_trimesh_collision()
-			1:
-				node.create_convex_collision()
-			2:
-				node.create_multiple_convex_collisions()
-
-		progress_bar.value += progress_step
-
-	label.text = 'Done!'
+		for batch in batches:
+			var thread = Thread.new()
+			thread.start(self, 'generate_collisions_batch', [batch, type, progress_step])
+		# TODO Make progress bar behave better
+		# TODO Wait for all threads?
+		# TODO Looks for more optimisations
 
 
 func _unregister():
