@@ -13,7 +13,6 @@ var vbox
 var type_selector
 var threading_select
 
-
 func create_ui():
 	vbox = VBoxContainer.new()
 	var hbox = HBoxContainer.new()
@@ -164,9 +163,6 @@ func _on_generate_button_pressed():
 		for batch in batches:
 			var thread = Thread.new()
 			thread.start(self, 'generate_collisions_batch', [batch, type, progress_step])
-		# TODO Make progress bar behave better
-		# TODO Wait for all threads?
-		# TODO Looks for more optimisations
 
 
 func _unregister():
