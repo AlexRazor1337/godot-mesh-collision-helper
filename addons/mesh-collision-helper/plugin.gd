@@ -1,4 +1,4 @@
-tool
+@tool
 extends EditorPlugin
 
 const RED = Color(1, 0, 0)
@@ -24,7 +24,8 @@ func create_ui():
 
 	generate_button = Button.new()
 	generate_button.text = 'Generate Collisions'
-	generate_button.connect('pressed', self, '_on_generate_button_pressed')
+	var clb = Callable(self, '_on_generate_button_pressed')
+	generate_button.connect('pressed', clb)
 
 	label = Label.new()
 	line_edit = LineEdit.new()
@@ -39,10 +40,10 @@ func create_ui():
 		else:
 			threading_select.add_item(str(i))
 
-	var editor_viewport = get_editor_interface().get_editor_viewport()
-	yield(get_tree(), 'idle_frame')
+	var editor_viewport = get_editor_interface().get_editor_main_screen()
+	await get_tree().process_frame
 
-	line_edit.rect_min_size.x = editor_viewport.rect_size.x / 3
+	line_edit.custom_minimum_size.x = editor_viewport.get_rect().size.x / 3
 	progress_bar = ProgressBar.new()
 
 	hbox.add_child(line_edit)
@@ -68,24 +69,24 @@ func _exit_tree():
 
 func label_error(msg):
 	label.text = msg
-	label.add_color_override('font_color', RED)
+	label.add_theme_color_override('font_color', RED)
 
 
 func reset_label():
 	label.text = ''
-	label.add_color_override('font_color', WHITE)
+	label.add_theme_color_override('font_color', WHITE)
 
 
 func find_all(node: Node, name_contains: String, result: Array) -> void:
-	if node is MeshInstance and name_contains in node.name:
+	if node is MeshInstance3D and name_contains in node.name:
 		result.push_back(node)
 
 	for child in node.get_children():
 		find_all(child, name_contains, result)
 
-func create_collision_shape_from_mesh(mesh: Mesh) -> ConvexPolygonShape:
-	var col = CollisionShape.new()
-	var cps = ConvexPolygonShape.new()
+func create_collision_shape_from_mesh(mesh: Mesh):
+	var col = CollisionShape3D.new()
+	var cps = ConvexPolygonShape3D.new()
 	cps.points = mesh.get_mesh_arrays()
 	col.shape = cps
 
@@ -97,11 +98,12 @@ func generate_collisions_batch(data):
 	var progress_step = data[2]
 	for node in meshes:
 		var static_body_child = node.get_child(0)
-		if static_body_child and static_body_child is StaticBody:
+		if static_body_child and static_body_child is StaticBody3D:
 			static_body_child.queue_free()
 
-		yield(get_tree(), 'idle_frame')
+		await get_tree().process_frame
 
+		print_debug('tete')
 		match type:
 			0:
 				node.create_trimesh_collision()
@@ -162,7 +164,8 @@ func _on_generate_button_pressed():
 
 		for batch in batches:
 			var thread = Thread.new()
-			thread.start(self, 'generate_collisions_batch', [batch, type, progress_step])
+			var clb = Callable(self, 'generate_collisions_batch').bind([batch, type, progress_step])
+			thread.start(clb)
 
 
 func _unregister():
